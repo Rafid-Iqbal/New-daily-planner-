@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Study Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #00cec9;
+            --bg: #dfe6e9;
+            --card-bg: #ffffff;
+            --text: #2d3436;
+            --border: #b2bec3;
+            --danger: #d63031;
+            --success: #00b894;
+            --warning: #fdcb6e;
+        }
+
+        [data-theme="dark"] {
+            --primary: #a29bfe;
+            --secondary: #81ecec;
+            --bg: #2d3436;
+            --card-bg: #1e272e;
+            --text: #dfe6e9;
+            --border: #636e72;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            transition: 0.3s;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Span columns for mobile, split for desktop */
+        @media (max-width: 768px) {
+            .dashboard { grid-template-columns: 1fr; }
+        }
+
+        h2, h3 { margin-top: 0; color: var(--primary); }
+        
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            grid-column: 1 / -1;
+            background: var(--card-bg);
+            padding: 15px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        input, select, button, textarea {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text);
+            outline: none;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        button:hover { filter: brightness(1.1); }
+        
+        .btn-small { width: auto; padding: 5px 10px; font-size: 0.9em; margin: 0 5px; }
+        .btn-danger { background: var(--danger); }
+        .btn-success { background: var(--success); }
+
+        /* Timer UI */
+        .timer-display {
+            font-size: 3rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+            font-family: monospace;
+        }
+        .timer-controls { display: flex; gap: 10px; }
+
+        /* Task List */
+        ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+        li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        li.completed span { text-decoration: line-through; opacity: 0.5; }
+        
+        /* Stats & Chart */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .stat-box {
+            background: var(--border);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .stat-box span { font-size: 0.8rem; display: block; font-weight: normal; }
+
+        /* Scratchpad */
+        textarea { resize: vertical; min-height: 100px; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="header-bar">
+        <h2>🚀 Master Study Dashboard</h2>
+        <div>
+            <span id="streak-counter" style="margin-right: 15px; font-weight: bold;">🔥 0 Day Streak</span>
+            <button class="btn-small" onclick="toggleTheme()">🌓 Theme</button>
+            <button class="btn-small" onclick="exportData()">💾 Backup Data</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📝 Add Task</h3>
+        <input type="text" id="taskInput" placeholder="What to study? (e.g., Pointers, HTML tags...)">
+        <div style="display: flex; gap: 10px;">
+            <select id="categoryInput">
+                <option value="C Programming">C Programming</option>
+                <option value="Web Development">Web Development</option>
+                <option value="Biology & Anatomy">Biology & Anatomy</option>
+                <option value="SSC/HSC Prep">SSC/HSC Prep</option>
+                <option value="Logic Puzzles">Logic Puzzles</option>
+                <option value="General">General</option>
+            </select>
+            <button onclick="addTask()">Add</button>
+        </div>
+
+        <h3 style="margin-top: 20px;">📋 Today's Plan</h3>
+        <ul id="taskList"></ul>
+    </div>
+
+    <div class="card" style="display: flex; flex-direction: column;">
+        <h3>⏱️ Focus Timer</h3>
+        <select id="timerSubject">
+            <option value="C Programming">C Programming</option>
+            <option value="Web Development">Web Development</option>
+            <option value="Biology & Anatomy">Biology & Anatomy</option>
+            <option value="SSC/HSC Prep">SSC/HSC Prep</option>
+            <option value="Logic Puzzles">Logic Puzzles</option>
+            <option value="General">General</option>
+        </select>
+        <div class="timer-display" id="timer-display">25:00</div>
+        <div class="timer-controls">
+            <button class="btn-success" onclick="startTimer()">▶ Start</button>
+            <button class="btn-danger" onclick="stopTimer()">⏸ Pause</button>
+            <button onclick="logSession(25)">Log 25 Mins (Manual)</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📊 Study Analytics</h3>
+        <div class="stats-grid">
+            <div class="stat-box" id="totalHours">0<span>Total Hours</span></div>
+            <div class="stat-box" id="tasksDone">0<span>Tasks Done</span></div>
+        </div>
+        <canvas id="studyChart" width="400" height="200"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>💡 Quick Scratchpad</h3>
+        <p style="font-size: 0.8em; margin-top: -10px;">Jot down ideas, code logic, or game clues here.</p>
+        <textarea id="scratchpad" placeholder="Type notes here..." oninput="saveNotes()"></textarea>
+    </div>
+</div>
+
+<script>
+    // --- Data Storage ---
+    let tasks = JSON.parse(localStorage.getItem('dashTasks')) || [];
+    let timeLogs = JSON.parse(localStorage.getItem('dashLogs')) || {};
+    let notes = localStorage.getItem('dashNotes') || "";
+    let lastLogin = localStorage.getItem('lastLogin');
+    let streak = parseInt(localStorage.getItem('streak')) || 0;
+
+    // --- Streak Logic ---
+    const today = new Date().toDateString();
+    if (lastLogin !== today) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (lastLogin === yesterday.toDateString()) {
+            streak++;
+        } else if (lastLogin !== null) {
+            streak = 1; // Reset if missed a day
+        } else {
+            streak = 1; // First day
+        }
+        localStorage.setItem('lastLogin', today);
+        localStorage.setItem('streak', streak);
+    }
+    document.getElementById('streak-counter').innerText = `🔥 ${streak} Day Streak`;
+
+    // --- Notes ---
+    document.getElementById('scratchpad').value = notes;
+    function saveNotes() {
+        localStorage.setItem('dashNotes', document.getElementById('scratchpad').value);
+    }
+
+    // --- Tasks ---
+    function addTask() {
+        const title = document.getElementById('taskInput').value;
+        const category = document.getElementById('categoryInput').value;
+        if (!title.trim()) return;
+
+        tasks.push({ id: Date.now(), title, category, completed: false });
+        document.getElementById('taskInput').value = '';
+        saveAndRender();
+    }
+
+    function toggleTask(id) {
+        tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+        saveAndRender();
+    }
+
+    function deleteTask(id) {
+        tasks = tasks.filter(t => t.id !== id);
+        saveAndRender();
+    }
+
+    // --- Timer & Logging ---
+    let timerInterval;
+    let timeLeft = 25 * 60;
+    let isRunning = false;
+
+    function startTimer() {
+        if (isRunning) return;
+        isRunning = true;
+        timerInterval = setInterval(() => {
+            if (timeLeft <= 0) {
+                stopTimer();
+                alert("Session Complete! 25 minutes logged.");
+                logSession(25);
+                timeLeft = 25 * 60; // reset
+                updateTimerDisplay();
+                return;
+            }
+            timeLeft--;
+            updateTimerDisplay();
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+        isRunning = false;
+    }
+
+    function updateTimerDisplay() {
+        const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const s = (timeLeft % 60).toString().padStart(2, '0');
+        document.getElementById('timer-display').innerText = `${m}:${s}`;
+    }
+
+    function logSession(minutes) {
+        const subject = document.getElementById('timerSubject').value;
+        if (!timeLogs[subject]) timeLogs[subject] = 0;
+        timeLogs[subject] += minutes;
+        saveAndRender();
+    }
+
+    // --- Chart & Stats ---
+    let studyChart;
+    function updateChart() {
+        const ctx = document.getElementById('studyChart').getContext('2d');
+        const labels = Object.keys(timeLogs);
+        // Convert minutes to hours with 1 decimal place
+        const data = Object.values(timeLogs).map(mins => (mins / 60).toFixed(1));
+
+        if (studyChart) studyChart.destroy(); // Clear old chart
+
+        studyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Hours Studied',
+                    data: data,
+                    backgroundColor: 'rgba(108, 92, 231, 0.7)',
+                    borderColor: 'rgba(108, 92, 231, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    function updateStats() {
+        const totalMins = Object.values(timeLogs).reduce((a, b) => a + b, 0);
+        document.getElementById('totalHours').innerHTML = `${(totalMins / 60).toFixed(1)}<span>Total Hours</span>`;
+        
+        const doneTasks = tasks.filter(t => t.completed).length;
+        document.getElementById('tasksDone').innerHTML = `${doneTasks}<span>Tasks Done</span>`;
+    }
+
+    // --- UI Render ---
+    function saveAndRender() {
+        localStorage.setItem('dashTasks', JSON.stringify(tasks));
+        localStorage.setItem('dashLogs', JSON.stringify(timeLogs));
+        
+        const list = document.getElementById('taskList');
+        list.innerHTML = '';
+        tasks.forEach(t => {
+            list.innerHTML += `
+                <li class="${t.completed ? 'completed' : ''}">
+                    <div>
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} onclick="toggleTask(${t.id})">
+                        <span>${t.title} <small style="color:gray;">(${t.category})</small></span>
+                    </div>
+                    <button class="btn-small btn-danger" onclick="deleteTask(${t.id})">X</button>
+                </li>
+            `;
+        });
+
+        updateChart();
+        updateStats();
+    }
+
+    // --- Utilities ---
+    function toggleTheme() {
+        const body = document.body;
+        const current = body.getAttribute('data-theme');
+        const newTheme = current === 'dark' ? 'light' : 'dark';
+        body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('dashTheme', newTheme);
+    }
+    
+    if (localStorage.getItem('dashTheme') === 'dark') {
+        document.body.setAttribute('data-theme', 'dark');
+    }
+
+    function exportData() {
+        const dataStr = JSON.stringify({ tasks, timeLogs, notes, streak });
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const exportFileDefaultName = 'study_data.json';
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+    }
+
+    // Initial Load
+    saveAndRender();
+</script>
+
+</body>
+  </html>
+  
